@@ -501,23 +501,6 @@ action certificate_init {
 certificate_tt = KMIP_HEADER 0 KMIP_TAG_CERTIFICATE KMIP_ITEM_TYPE_STRUCTURE ;
 certificate = certificate_tt len @certificate_init certificate_type certificate_value @certificate_action;
 
-# KMIP_TAG_COMMON_TEMPLATE_ATTRIBUTE
-KMIP_TAG_COMMON_TEMPLATE_ATTRIBUTE = 0x001F;
-
-action common_template_attribute_action {
-	if (DEBUG)
-		printf("common_template_attribute\n");
-}
-
-action common_template_attribute_init {
-	if (DEBUG)
-		printf("common_template_attribute_init\n");
-	/* current_object = (void *)malloc(sizeof(kmip_common_template_attribute_t)); */
-}
-
-common_template_attribute_tt = KMIP_HEADER 0 KMIP_TAG_COMMON_TEMPLATE_ATTRIBUTE KMIP_ITEM_TYPE_STRUCTURE;
-common_template_attribute = common_template_attribute_tt len @common_template_attribute_init @common_template_attribute_action;
-
 # KMIP_TAG_COMPROMISE_DATE
 KMIP_TAG_COMPROMISE_DATE = 0x0020;
 
@@ -1079,6 +1062,37 @@ action key_format_type_init {
 key_format_type_tt = KMIP_HEADER 0 KMIP_TAG_KEY_FORMAT_TYPE KMIP_ITEM_TYPE_ENUMERATION ;
 key_format_type = key_format_type_tt len @key_format_type_init get_int @key_format_type_action;
 
+# KMIP_TAG_KEY_MATERIAL
+KMIP_TAG_KEY_MATERIAL = 0x0043;
+
+action key_material_byte_string_action {
+	if (DEBUG)
+		printf("key_material_byte_string\n");
+}
+
+action key_material_byte_string_init {
+	if (DEBUG)
+		printf("key_material_byte_string_init\n");
+	/* current_object = (void *)malloc(sizeof(kmip_key_material_byte_string_t)); */
+}
+
+key_material_byte_string_tt = KMIP_HEADER 0 KMIP_TAG_KEY_MATERIAL KMIP_ITEM_TYPE_BYTE_STRING ;
+key_material_byte_string = key_material_byte_string_tt len @byte_string_malloc text_string @byte_string_action;
+
+action key_material_struct_action {
+	if (DEBUG)
+		printf("key_material_struct\n");
+}
+
+action key_material_struct_init {
+	if (DEBUG)
+		printf("key_material_struct_init\n");
+	/* current_object = (void *)malloc(sizeof(kmip_key_material_struct_t)); */
+}
+
+key_material_struct_tt = KMIP_HEADER 0 KMIP_TAG_KEY_MATERIAL KMIP_ITEM_TYPE_STRUCTURE ;
+key_material_struct = key_material_struct_tt len @key_material_struct_init @key_material_struct_action;
+
 # KMIP_TAG_KEY_VALUE
 KMIP_TAG_KEY_VALUE = 0x0045;
 
@@ -1094,7 +1108,7 @@ action key_value_struct_init {
 }
 
 key_value_struct_tt = KMIP_HEADER 0 KMIP_TAG_KEY_VALUE KMIP_ITEM_TYPE_STRUCTURE ;
-key_value_struct = key_value_struct_tt len @key_value_struct_init @key_value_struct_action;
+key_value_struct = key_value_struct_tt len @key_value_struct_init ( key_material_struct | key_material_byte_string );
 
 action key_value_byte_string_action {
 	if (DEBUG)
@@ -1143,37 +1157,6 @@ action key_compression_type_init {
 
 key_compression_type_tt = KMIP_HEADER 0 KMIP_TAG_KEY_COMPRESSION_TYPE KMIP_ITEM_TYPE_ENUMERATION ;
 key_compression_type = key_compression_type_tt len @key_compression_type_init get_int @key_compression_type_action;
-
-# KMIP_TAG_KEY_MATERIAL
-KMIP_TAG_KEY_MATERIAL = 0x0043;
-
-action key_material_byte_string_action {
-	if (DEBUG)
-		printf("key_material_byte_string\n");
-}
-
-action key_material_byte_string_init {
-	if (DEBUG)
-		printf("key_material_byte_string_init\n");
-	/* current_object = (void *)malloc(sizeof(kmip_key_material_byte_string_t)); */
-}
-
-key_material_byte_string_tt = KMIP_HEADER 0 KMIP_TAG_KEY_MATERIAL KMIP_ITEM_TYPE_BYTE_STRING ;
-key_material_byte_string = key_material_byte_string_tt len @key_material_byte_string_init text_string @key_material_byte_string_action;
-
-action key_material_struct_action {
-	if (DEBUG)
-		printf("key_material_struct\n");
-}
-
-action key_material_struct_init {
-	if (DEBUG)
-		printf("key_material_struct_init\n");
-	/* current_object = (void *)malloc(sizeof(kmip_key_material_struct_t)); */
-}
-
-key_material_struct_tt = KMIP_HEADER 0 KMIP_TAG_KEY_MATERIAL KMIP_ITEM_TYPE_STRUCTURE ;
-key_material_struct = key_material_struct_tt len @key_material_struct_init @key_material_struct_action;
 
 # KMIP_TAG_KEY_PART_IDENTIFIER
 KMIP_TAG_KEY_PART_IDENTIFIER = 0x0044;
@@ -1719,23 +1702,6 @@ action private_key_init {
 private_key_tt = KMIP_HEADER 0 KMIP_TAG_PRIVATE_KEY KMIP_ITEM_TYPE_STRUCTURE ;
 private_key = private_key_tt len @private_key_init key_block @private_key_action;
 
-# KMIP_TAG_PRIVATE_KEY_TEMPLATE_ATTRIBUTE
-KMIP_TAG_PRIVATE_KEY_TEMPLATE_ATTRIBUTE = 0x0065;
-
-action private_key_template_attribute_action {
-	if (DEBUG)
-		printf("private_key_template_attribute\n");
-}
-
-action private_key_template_attribute_init {
-	if (DEBUG)
-		printf("private_key_template_attribute_init\n");
-	/* current_object = (void *)malloc(sizeof(kmip_private_key_template_attribute_t)); */
-}
-
-private_key_template_attribute_tt = KMIP_HEADER 0 KMIP_TAG_PRIVATE_KEY_TEMPLATE_ATTRIBUTE KMIP_ITEM_TYPE_STRUCTURE ;
-private_key_template_attribute = private_key_template_attribute_tt len @private_key_template_attribute_init @private_key_template_attribute_action;
-
 # KMIP_TAG_PRIVATE_KEY_UNIQUE_IDENTIFIER
 KMIP_TAG_PRIVATE_KEY_UNIQUE_IDENTIFIER = 0x0066;
 
@@ -1871,23 +1837,6 @@ action public_key_init {
 
 public_key_tt = KMIP_HEADER 0 KMIP_TAG_PUBLIC_KEY KMIP_ITEM_TYPE_STRUCTURE ;
 public_key = public_key_tt len @public_key_init key_block @public_key_action;
-
-# KMIP_TAG_PUBLIC_KEY_TEMPLATE_ATTRIBUTE
-KMIP_TAG_PUBLIC_KEY_TEMPLATE_ATTRIBUTE = 0x006E;
-
-action public_key_template_attribute_action {
-	if (DEBUG)
-		printf("public_key_template_attribute\n");
-}
-
-action public_key_template_attribute_init {
-	if (DEBUG)
-		printf("public_key_template_attribute_init\n");
-	/* current_object = (void *)malloc(sizeof(kmip_public_key_template_attribute_t)); */
-}
-
-public_key_template_attribute_tt = KMIP_HEADER 0 KMIP_TAG_PUBLIC_KEY_TEMPLATE_ATTRIBUTE KMIP_ITEM_TYPE_STRUCTURE ;
-public_key_template_attribute = public_key_template_attribute_tt len @public_key_template_attribute_init @public_key_template_attribute_action;
 
 # KMIP_TAG_PUBLIC_KEY_UNIQUE_IDENTIFIER
 KMIP_TAG_PUBLIC_KEY_UNIQUE_IDENTIFIER = 0x006F;
@@ -2040,7 +1989,7 @@ action request_header_init {
 }
 
 request_header_tt = KMIP_HEADER 0 KMIP_TAG_REQUEST_HEADER KMIP_ITEM_TYPE_STRUCTURE ;
-request_header = request_header_tt len @request_header_init @request_header_action;
+request_header = request_header_tt len @request_header_init protocol_version batch_count @request_header_action;
 
 # KMIP_TAG_REQUEST_MESSAGE
 KMIP_TAG_REQUEST_MESSAGE = 0x0078;
@@ -2057,7 +2006,7 @@ action request_message_init {
 }
 
 request_message_tt = KMIP_HEADER 0 KMIP_TAG_REQUEST_MESSAGE KMIP_ITEM_TYPE_STRUCTURE ;
-request_message = request_message_tt len @request_message_init @request_message_action;
+#request_message = request_message_tt len @request_message_init @request_message_action;
 
 # KMIP_TAG_REQUEST_PAYLOAD
 KMIP_TAG_REQUEST_PAYLOAD = 0x0079;
@@ -2074,7 +2023,7 @@ action request_payload_init {
 }
 
 request_payload_tt = KMIP_HEADER 0 KMIP_TAG_REQUEST_PAYLOAD KMIP_ITEM_TYPE_STRUCTURE ;
-request_payload = request_payload_tt len @request_payload_init @request_payload_action;
+#request_payload = request_payload_tt len @request_payload_init @request_payload_action;
 
 # KMIP_TAG_TIME_STAMP
 KMIP_TAG_TIME_STAMP = 0x0092;
@@ -2353,7 +2302,7 @@ attribute_value_struct = attribute_value_struct_tt len @attribute_value_struct_i
 
 action attribute_value_enum_action {
 	if (DEBUG)
-		printf("attribute_value_enum\n");
+		printf("attribute_value_enum: %d\n", current_int.u32);
 }
 
 action attribute_value_enum_init {
@@ -2364,6 +2313,20 @@ action attribute_value_enum_init {
 
 attribute_value_enum_tt = KMIP_HEADER 0 KMIP_TAG_ATTRIBUTE_VALUE KMIP_ITEM_TYPE_ENUMERATION ;
 attribute_value_enum = attribute_value_enum_tt len @attribute_value_enum_init get_int @attribute_value_enum_action;
+
+action attribute_value_integer_action {
+	if (DEBUG)
+		printf("attribute_value_integer: %d\n", current_int.u32);
+}
+
+action attribute_value_integer_init {
+	if (DEBUG)
+		printf("attribute_value_integer_init\n");
+	/* current_object = (void *)malloc(sizeof(kmip_attribute_value_t)); */
+}
+
+attribute_value_integer_tt = KMIP_HEADER 0 KMIP_TAG_ATTRIBUTE_VALUE KMIP_ITEM_TYPE_INTEGER ;
+attribute_value_integer = attribute_value_integer_tt len @attribute_value_integer_init get_int @attribute_value_integer_action;
 
 # KMIP_TAG_ATTRIBUTE
 KMIP_TAG_ATTRIBUTE = 0x0008;
@@ -2380,7 +2343,58 @@ action attribute_init {
 }
 
 attribute_tt = KMIP_HEADER 0 KMIP_TAG_ATTRIBUTE KMIP_ITEM_TYPE_STRUCTURE ;
-attribute = attribute_tt len @attribute_init attribute_name attribute_index? ( attribute_value_struct | attribute_value_enum ) @attribute_action;
+attribute = attribute_tt len @attribute_init attribute_name attribute_index? ( attribute_value_struct | attribute_value_enum | attribute_value_integer ) @attribute_action;
+
+# KMIP_TAG_COMMON_TEMPLATE_ATTRIBUTE
+KMIP_TAG_COMMON_TEMPLATE_ATTRIBUTE = 0x001F;
+
+action common_template_attribute_action {
+	if (DEBUG)
+		printf("common_template_attribute\n");
+}
+
+action common_template_attribute_init {
+	if (DEBUG)
+		printf("common_template_attribute_init\n");
+	/* current_object = (void *)malloc(sizeof(kmip_common_template_attribute_t)); */
+}
+
+common_template_attribute_tt = KMIP_HEADER 0 KMIP_TAG_COMMON_TEMPLATE_ATTRIBUTE KMIP_ITEM_TYPE_STRUCTURE;
+common_template_attribute = common_template_attribute_tt len @common_template_attribute_init attribute* @common_template_attribute_action;
+
+# KMIP_TAG_PRIVATE_KEY_TEMPLATE_ATTRIBUTE
+KMIP_TAG_PRIVATE_KEY_TEMPLATE_ATTRIBUTE = 0x0065;
+
+action private_key_template_attribute_action {
+	if (DEBUG)
+		printf("private_key_template_attribute\n");
+}
+
+action private_key_template_attribute_init {
+	if (DEBUG)
+		printf("private_key_template_attribute_init\n");
+	/* current_object = (void *)malloc(sizeof(kmip_private_key_template_attribute_t)); */
+}
+
+private_key_template_attribute_tt = KMIP_HEADER 0 KMIP_TAG_PRIVATE_KEY_TEMPLATE_ATTRIBUTE KMIP_ITEM_TYPE_STRUCTURE ;
+private_key_template_attribute = private_key_template_attribute_tt len @private_key_template_attribute_init attribute* @private_key_template_attribute_action;
+
+# KMIP_TAG_PUBLIC_KEY_TEMPLATE_ATTRIBUTE
+KMIP_TAG_PUBLIC_KEY_TEMPLATE_ATTRIBUTE = 0x006E;
+
+action public_key_template_attribute_action {
+	if (DEBUG)
+		printf("public_key_template_attribute\n");
+}
+
+action public_key_template_attribute_init {
+	if (DEBUG)
+		printf("public_key_template_attribute_init\n");
+	/* current_object = (void *)malloc(sizeof(kmip_public_key_template_attribute_t)); */
+}
+
+public_key_template_attribute_tt = KMIP_HEADER 0 KMIP_TAG_PUBLIC_KEY_TEMPLATE_ATTRIBUTE KMIP_ITEM_TYPE_STRUCTURE ;
+public_key_template_attribute = public_key_template_attribute_tt len @public_key_template_attribute_init attribute* @public_key_template_attribute_action;
 
 # KMIP_TAG_SERVER_INFORMATION
 KMIP_TAG_SERVER_INFORMATION = 0x0088;
@@ -2550,7 +2564,7 @@ action template_attribute_init {
 }
 
 template_attribute_tt = KMIP_HEADER 0 KMIP_TAG_TEMPLATE_ATTRIBUTE KMIP_ITEM_TYPE_STRUCTURE ;
-template_attribute = template_attribute_tt len @template_attribute_init @template_attribute_action;
+template_attribute = template_attribute_tt len @template_attribute_init attribute* @template_attribute_action;
 
 # KMIP_TAG_UNIQUE_BATCH_ITEM_ID
 KMIP_TAG_UNIQUE_BATCH_ITEM_ID = 0x0093;
