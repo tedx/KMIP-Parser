@@ -21,5 +21,5 @@ Run 'python test/response1.py' to produce test1.bin then run './kmip test1.bin'.
 
 Current state
 
-The current version contains rules for parsing 'Response Message' and the actions do little other than print
-information about the tag and associated data. Hopefully over time more tag and message type will be supported.
+The current version contains rules for parsing requests and responses. Note that the actions do little other than print
+information about the tag and associated data.
