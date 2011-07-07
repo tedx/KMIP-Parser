@@ -4,6 +4,9 @@
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <uthash.h>
+#include <mongo.h>
+#include <md5.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -561,24 +564,7 @@ extern "C" {
 
 #define KMIP_MAJOR_VERSION 0
 #define KMIP_MINOR_VERSION 1
-  /*
-typedef struct _tagtype {
-  uint8_t header;
-  uint16_t tag;
-  uint8_t type;
-} kmip_tagtype_t;
-  */
-  /*
-union {
-  uint64_t u64;
-  uint8_t arr[8];
-} uint64;
 
-union {
-  uint32_t u32;
-  uint8_t arr[4];
-} uint32;
-  */
 typedef struct _tagtype {
   unsigned header : 8;
   unsigned tag : 16;
@@ -587,26 +573,26 @@ typedef struct _tagtype {
 
 typedef struct _enum {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   uint32_t value;
 } kmip_enum_t;
 
 typedef struct _int {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   uint32_t value;
 } kmip_int_t;
 
 typedef struct _bigint {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
-  struct ttlv_bigint_t *next; /* Support list of BigIntegers for 'Key Material' responses */
-  uint8_t value[];
+  int len;
+  struct kmip_bigint_t *next; /* Support list of BigIntegers for 'Key Material' responses */
+  uint8_t *value;
 } kmip_bigint_t;
 
 typedef struct _string {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   unsigned char *value;
   struct kmip_string_t *next;
 } kmip_string_t;
@@ -633,7 +619,7 @@ typedef struct _issuer_sn {
 
 typedef struct _attribute_value {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   uint32_t value;
   kmip_name_value_t *name_value;
   kmip_issuer_sn_t *issuer_sn;
@@ -645,7 +631,7 @@ typedef struct _attribute_value {
 
 typedef struct _attribute {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_string_t *name;
   kmip_int_t *index;
   kmip_attribute_value_t *value;
@@ -654,13 +640,13 @@ typedef struct _attribute {
 
 typedef struct _template_attribute {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_attribute_t *attribute;
 } kmip_template_attribute_t;
 
 typedef struct _response_key_material {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_bigint_t *key_material;
 } kmip_response_key_material_t;
 
@@ -668,7 +654,7 @@ enum KmipKeyMaterialType { Request, Response };
 
 typedef struct _key_value {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   enum KmipKeyMaterialType key_material_type;
   kmip_string_t *request_key_material;
   kmip_response_key_material_t *response_key_material;
@@ -676,12 +662,12 @@ typedef struct _key_value {
 
 typedef struct _timestamp {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
 } kmip_timestamp_t;
 
 typedef struct _key_block {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_enum_t *key_format_type;
   kmip_key_value_t *key_value;
   kmip_enum_t *cryptographic_algorithm;
@@ -690,19 +676,19 @@ typedef struct _key_block {
 
 typedef struct _private_key {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_key_block_t *key_block;
 } kmip_private_key_t;
 
 typedef struct _public_key {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_key_block_t *key_block;
 } kmip_public_key_t;
 
 typedef struct _certificate {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_enum_t *type;
   kmip_string_t *value;
 } kmip_certificate_t;
@@ -733,7 +719,7 @@ typedef struct _register_payload {
 
 typedef struct _response_private_key {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_key_block_t *key_block;
 } kmip_response_private_key_t;
 
@@ -741,7 +727,7 @@ enum KmipOperationType { Get, Locate, Register, Destroy, AddAttribute, GetAttrib
 
 typedef struct _response_payload {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_enum_t *object_type;
   kmip_string_t *unique_identifier;
   kmip_attribute_t *attribute;
@@ -758,13 +744,13 @@ typedef struct _locate_payload {
 
 typedef struct _get_payload {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   /* need more stuff here */
 } kmip_get_payload_t;
 
 typedef struct _request_payload {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   enum KmipOperationType type;
   kmip_register_payload_t *register_payload;
   kmip_locate_payload_t *locate_payload;
@@ -773,7 +759,7 @@ typedef struct _request_payload {
 
 typedef struct _batch_item {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_enum_t *operation;
   kmip_string_t *unique_batch_item_id; /* can be null */
   kmip_request_payload_t *payload;
@@ -782,14 +768,14 @@ typedef struct _batch_item {
   
 typedef struct _protocol_version {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_int_t *major;
   kmip_int_t *minor;
 } kmip_protocol_version_t;
 
 typedef struct _header {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_protocol_version_t *version;
   kmip_timestamp_t *timestamp;
   kmip_int_t *batch_count;
@@ -797,7 +783,7 @@ typedef struct _header {
 
 typedef struct _message {
   kmip_tagtype_t *tagtype;
-  uint32_t len;
+  int len;
   kmip_request_header_t *header;
   kmip_batch_item_t *batch_item;
 } kmip_request_message_t, kmip_response_message_t;
@@ -808,72 +794,167 @@ typedef struct {
   SSL_CTX *sslContext;
 } kmip_connection_t;
 
-  int kmip_create_string(char *, uint16_t, uint8_t, kmip_string_t **);
-  int kmip_create_register_payload(enum KmipObjectType, void *, kmip_register_payload_t **);
-  int kmip_create_register_public_key(kmip_template_attribute_t*, kmip_public_key_t*, kmip_register_public_key_t**);
-  int kmip_create_key_material(unsigned char *, kmip_string_t **); 
-  int kmip_create_key_value(enum KmipKeyMaterialType, void *, kmip_key_value_t **);
-  int kmip_create_key_block(uint32_t, uint32_t, uint32_t, kmip_key_value_t *, kmip_key_block_t **);
-  int kmip_create_public_key(kmip_key_block_t *, kmip_public_key_t **);
-  int kmip_create_attribute(char *, enum KmipAttributeType, uint32_t, void *, kmip_attribute_t **);
-  int kmip_create_link_attribute(char *, uint16_t, uint32_t, kmip_attribute_t **);
-  int kmip_create_link(uint32_t, char *, kmip_link_t **);
-  int kmip_create_template_attribute(kmip_attribute_t *, kmip_template_attribute_t **);
-  int kmip_create_request_payload(enum KmipOperationType, void *, kmip_request_payload_t **);
-  int kmip_create_batch_item(kmip_request_payload_t *, char *, uint32_t, kmip_batch_item_t **);
-  int kmip_create_request_header(uint32_t, kmip_request_header_t **);
-  int kmip_create_request_message(kmip_request_header_t*, kmip_batch_item_t*, kmip_request_message_t**);
-  int kmip_template_attribute_add_attribute(kmip_template_attribute_t *, kmip_attribute_t *);
+typedef struct _kmip_parser_state {
+  uint8_t *current_byte_ptr;
+  uint8_t *current_byte_string;
+  char *current_attribute_name;
+  int current_string_len;
+  char *current_string;
 
-  int kmip_recv_tagtype(kmip_tagtype_t*, kmip_connection_t*);
+  union {
+    uint64_t u64;
+    uint8_t arr[8];
+  } current_long;
 
-  int kmip_send_string(kmip_string_t*, kmip_connection_t*);
-  int kmip_send_register_payload(kmip_register_payload_t*, kmip_connection_t*);
-  int kmip_send_register_public_key(kmip_register_public_key_t*, kmip_connection_t*);
-  int kmip_send_register_private_key(kmip_register_private_key_t*, kmip_connection_t*);
-  int kmip_send_register_certificate(kmip_register_certificate_t*, kmip_connection_t*);
-  int kmip_send_key_material(kmip_string_t*, kmip_connection_t*); 
-  int kmip_send_key_value(kmip_key_value_t*, kmip_connection_t*);
-  int kmip_send_key_block(kmip_key_block_t*, kmip_connection_t*);
-  int kmip_send_public_key(kmip_public_key_t*, kmip_connection_t*);
-  int kmip_send_attribute(kmip_attribute_t*, kmip_connection_t*);
-  int kmip_send_template_attribute(kmip_template_attribute_t*, kmip_connection_t*);
-  int kmip_send_request_payload(kmip_request_payload_t*, kmip_connection_t*);
-  int kmip_send_request_header(kmip_request_header_t*, kmip_connection_t*);
-  int kmip_send_protocol_version(kmip_protocol_version_t*, kmip_connection_t*);
-  int kmip_send_batch_item(kmip_batch_item_t*, kmip_connection_t*);
-  int kmip_send_request_message(kmip_request_message_t*, kmip_connection_t*);
-  int kmip_send_locate_payload(kmip_locate_payload_t*, kmip_connection_t*);
-  int kmip_send_get_payload(kmip_get_payload_t*, kmip_connection_t*);
+  union {
+    int u32;
+    uint8_t arr[4];
+  } current_len;
 
-int kmip_sizeof_register_payload(kmip_register_payload_t *);
-int kmip_sizeof_register_private_key(kmip_register_private_key_t *);
-int kmip_sizeof_register_public_key(kmip_register_public_key_t *);
-int kmip_sizeof_register_certificate(kmip_register_certificate_t *);
-int kmip_sizeof_bigint(kmip_bigint_t *);
-int kmip_sizeof_string(kmip_string_t *);
-int kmip_sizeof_attribute_value(enum KmipAttributeType, void *);
-int kmip_sizeof_attribute(kmip_attribute_t *);
-int kmip_sizeof_template_attribute(kmip_template_attribute_t *);
-int kmip_sizeof_key_value(kmip_key_value_t *);
-int kmip_sizeof_key_block(kmip_key_block_t *);
-int kmip_sizeof_private_key(kmip_private_key_t *);
-int kmip_sizeof_register_private_key(kmip_register_private_key_t *);
+  union {
+    uint32_t u32;
+    uint8_t arr[4];
+  } current_int;
 
-void kmip_free_register_payload(kmip_register_payload_t *);
-void kmip_free_register_private_key(kmip_register_private_key_t *);
-void kmip_free_register_public_key(kmip_register_public_key_t *);
-void kmip_free_register_certificate(kmip_register_certificate_t *);
-void kmip_free_bigint(kmip_bigint_t *);
-void kmip_free_string(kmip_string_t *);
-void kmip_free_attribute_value(enum KmipAttributeType, void *);
-void kmip_free_attribute(kmip_attribute_t *);
-void kmip_free_template_attribute(kmip_template_attribute_t *);
-void kmip_free_key_value(kmip_key_value_t *);
-void kmip_free_key_block(kmip_key_block_t *);
-void kmip_free_private_key(kmip_private_key_t *);
-void kmip_free_register_private_key(kmip_register_private_key_t *);
+  bson_buffer *bb;
+} kmip_parser_state_t;
+
+typedef struct _name_value_pair {
+    const char *name;          /* key */
+    uint8_t type;
+    int len;
+    void *value;
+    UT_hash_handle hh;         /* makes this structure hashable */
+} kmip_name_value_pair_t;
+
+#define KMIP_NAME_VALUE_PAIR(n, v, l, t, hashtable)			\
+{                                                                                              \
+    kmip_name_value_pair_t *nvp = (kmip_name_value_pair_t *)malloc(sizeof(kmip_name_value_pair_t)); \
+    nvp->name = n; \
+    nvp->len = l; \
+    nvp->type = t;			\
+    nvp->value = (void *)v;						\
+    HASH_ADD_KEYPTR( hh, hashtable, nvp->name, strlen(nvp->name), nvp );                             \
+}
+
+typedef void (*kmip_action_t)( kmip_parser_state_t *, uint8_t **, int);
+
+typedef struct _action_function {
+    const char *name;          /* key */
+    kmip_action_t action;                    
+    UT_hash_handle hh;         /* makes this structure hashable */
+} kmip_action_function_t;
+
+#define KMIP_ACTION_HANDLER(n, funcptr)                                                        \
+{                                                                                              \
+    kmip_action_function_t *a = (kmip_action_function_t *)malloc(sizeof(kmip_action_function_t)); \
+    a->name = n;                                                                               \
+    a->action = funcptr;                                                                          \
+    HASH_ADD_KEYPTR( hh, kmip_actions, a->name, strlen(a->name), a );                             \
+}
+
+typedef struct _kmip {
+  char *db_name;
+  int db_port;
+  mongo_connection *db;
+  kmip_connection_t *net;
+} kmip_t;
+
+int kmip_create_string(char*, uint16_t, uint8_t, kmip_string_t**);
+int kmip_create_register_payload(enum KmipObjectType, void*, kmip_register_payload_t**);
+int kmip_create_register_public_key(kmip_template_attribute_t*, kmip_public_key_t*, kmip_register_public_key_t**);
+int kmip_create_key_material(unsigned char*, kmip_string_t**); 
+int kmip_create_key_value(enum KmipKeyMaterialType, void*, kmip_key_value_t**);
+int kmip_create_key_block(uint32_t, uint32_t, uint32_t, kmip_key_value_t*, kmip_key_block_t**);
+int kmip_create_public_key(kmip_key_block_t*, kmip_public_key_t**);
+int kmip_create_attribute(char*, uint32_t, kmip_attribute_t**);
+int kmip_create_link_attribute(char*, uint16_t, int, kmip_attribute_t**);
+int kmip_create_link(uint32_t, char*, kmip_link_t**);
+int kmip_create_template_attribute(kmip_attribute_t*, kmip_template_attribute_t**);
+int kmip_create_request_payload(enum KmipOperationType, void*, kmip_request_payload_t**);
+int kmip_create_batch_item(kmip_request_payload_t*, char*, uint32_t, kmip_batch_item_t**);
+int kmip_create_request_header(uint32_t, kmip_request_header_t**);
+int kmip_create_request_message(kmip_request_header_t*, kmip_batch_item_t*, kmip_request_message_t**);
+int kmip_template_attribute_add_attribute(kmip_template_attribute_t*, kmip_attribute_t*);
+
+int kmip_read(kmip_connection_t*, uint8_t**);
+int kmip_send(kmip_connection_t*, uint8_t*, int);
+
+int kmip_append_string(kmip_string_t*, uint8_t**, uint8_t*);
+int kmip_append_register_payload(kmip_register_payload_t*, uint8_t**, uint8_t*);
+int kmip_append_register_public_key(kmip_register_public_key_t*, uint8_t**, uint8_t*);
+int kmip_append_register_private_key(kmip_register_private_key_t*, uint8_t**, uint8_t*);
+int kmip_append_register_certificate(kmip_register_certificate_t*, uint8_t**, uint8_t*);
+int kmip_append_key_material(kmip_string_t*, uint8_t**, uint8_t*); 
+int kmip_append_key_value(kmip_key_value_t*, uint8_t**, uint8_t*);
+int kmip_append_key_block(kmip_key_block_t*, uint8_t**, uint8_t*);
+int kmip_append_public_key(kmip_public_key_t*, uint8_t**, uint8_t*);
+int kmip_append_attribute(kmip_attribute_t*, uint8_t**, uint8_t*);
+int kmip_append_attribute_value(kmip_attribute_value_t*, uint8_t**, uint8_t*);
+int kmip_append_template_attribute(kmip_template_attribute_t*, uint8_t**, uint8_t*);
+int kmip_append_request_payload(kmip_request_payload_t*, uint8_t**, uint8_t*);
+int kmip_append_request_header(kmip_request_header_t*, uint8_t**, uint8_t*);
+int kmip_append_protocol_version(kmip_protocol_version_t*, uint8_t**, uint8_t*);
+int kmip_append_batch_item(kmip_batch_item_t*, uint8_t**, uint8_t*);
+int kmip_append_request_message(kmip_request_message_t*, uint8_t**, uint8_t*);
+int kmip_append_locate_payload(kmip_locate_payload_t*, uint8_t**, uint8_t*);
+int kmip_append_get_payload(kmip_get_payload_t*, uint8_t**, uint8_t*);
+int kmip_append_tagtype(kmip_tagtype_t*, int, uint8_t**, uint8_t*);
+
+int kmip_sizeof_register_payload(kmip_register_payload_t*);
+int kmip_sizeof_register_private_key(kmip_register_private_key_t*);
+int kmip_sizeof_register_public_key(kmip_register_public_key_t*);
+int kmip_sizeof_register_certificate(kmip_register_certificate_t*);
+int kmip_sizeof_bigint(kmip_bigint_t*);
+int kmip_sizeof_string(kmip_string_t*);
+int kmip_sizeof_attribute_value(kmip_attribute_value_t*);
+int kmip_sizeof_attribute(kmip_attribute_t*);
+int kmip_sizeof_template_attribute(kmip_template_attribute_t*);
+int kmip_sizeof_key_value(kmip_key_value_t*);
+int kmip_sizeof_key_block(kmip_key_block_t*);
+int kmip_sizeof_private_key(kmip_private_key_t*);
+int kmip_sizeof_register_private_key(kmip_register_private_key_t*);
+
+void kmip_free_register_payload(kmip_register_payload_t*);
+void kmip_free_register_private_key(kmip_register_private_key_t*);
+void kmip_free_register_public_key(kmip_register_public_key_t*);
+void kmip_free_register_certificate(kmip_register_certificate_t*);
+void kmip_free_bigint(kmip_bigint_t*);
+void kmip_free_string(kmip_string_t*);
+void kmip_free_attribute_value(kmip_attribute_value_t*);
+void kmip_free_attribute(kmip_attribute_t*);
+void kmip_free_template_attribute(kmip_template_attribute_t*);
+void kmip_free_key_value(kmip_key_value_t*);
+void kmip_free_key_block(kmip_key_block_t*);
+void kmip_free_private_key(kmip_private_key_t*);
+void kmip_free_register_private_key(kmip_register_private_key_t*);
 void kmip_free_key_material(kmip_string_t*); 
+
+int kmip_tcp_connect(void);
+int kmip_ssl_connect(kmip_connection_t**);
+void kmip_ssl_disconnect (kmip_connection_t*);
+int kmip_ssl_read (kmip_connection_t*, char**);
+int kmip_ssl_write_data (kmip_connection_t*, uint8_t*, int);
+int kmip_ssl_write (kmip_connection_t*, char*);
+
+void kmip_request_message_init_handler(kmip_parser_state_t*, uint8_t**, int);
+void kmip_request_message_init_handler(kmip_parser_state_t*, uint8_t**, int);
+void kmip_attribute_name_action_handler(kmip_parser_state_t*, uint8_t**, int);
+void kmip_attribute_value_int_action_handler(kmip_parser_state_t*, uint8_t**, int);
+void kmip_key_material_action_handler(kmip_parser_state_t*, uint8_t**, int);
+void kmip_key_format_type_action_handler(kmip_parser_state_t*, uint8_t**, int);
+void kmip_object_type_action_handler(kmip_parser_state_t*, uint8_t**, int);
+void kmip_operation_action_handler(kmip_parser_state_t*, uint8_t**, int);
+void kmip_byte_string_init_handler(kmip_parser_state_t*, uint8_t**, int);
+void kmip_byte_string_action_handler(kmip_parser_state_t*, uint8_t**, int);
+/*void kmip_(kmip_parser_state_t*, uint8_t**, int);*/
+void kmip_request_header_init_handler(kmip_parser_state_t*, uint8_t**, int);
+
+int kmip_parse( uint8_t*, int, bson**);
+
+extern kmip_name_value_pair_t *kmip_name_value_pairs;
+extern kmip_action_function_t *kmip_actions;
+extern kmip_action_function_t *kmip_action;
 
 #ifdef __cplusplus
 }
